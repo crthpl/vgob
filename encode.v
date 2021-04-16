@@ -1,10 +1,8 @@
 module vgob
 
-pub fn encode<T>(data T) ?[]byte {
-	mut result := []byte{}
-	// compile-time `for` loop
-	// T.fields gives an array of a field metadata type
+import math.bits
 
+pub fn encode<T>(data T) ?[]byte {
 	// $for field in T.fields {
 	// 	$if field.typ is string {
 	// 		// $(string_expr) produces an identifier
@@ -13,20 +11,53 @@ pub fn encode<T>(data T) ?[]byte {
 	// 		result << encode_int(data) ?
 	// 	}
 	// }
-	$if T is int {
+	mut res := encode_no_len<T>(data) ?
+	len := encode_uint(u64(res.len)) ?
+	res.prepend(len)
+	return res
+}
+
+fn encode_no_len<T>(data T) ?[]byte {
+	mut result := []byte{}
+	$if T is i8 {
+		result << encode_type(.int) ?
+		result << encode_int(data) ?
+	} $else $if T is i16 {
+		result << encode_type(.int) ?
+		result << encode_int(data) ?
+	} $else $if T is int {
 		result << encode_type(.int) ?
 		result << encode_int(data) ?
 	} $else $if T is i64 {
 		result << encode_type(.int) ?
 		result << encode_int(data) ?
+	} $else $if T is byte {
+		result << encode_type(.uint) ?
+		result << encode_uint(data) ?
+	} $else $if T is u16 {
+		result << encode_type(.uint) ?
+		result << encode_uint(data) ?
+	} $else $if T is u32 {
+		result << encode_type(.uint) ?
+		result << encode_uint(data) ?
 	} $else $if T is u64 {
 		result << encode_type(.uint) ?
 		result << encode_uint(data) ?
+	} $else $if T is u64 {
+		result << encode_type(.uint) ?
+		result << encode_uint(data) ?
+	} $else $if T is f32 {
+		result << encode_type(.float) ?
+		resudlt << encode_float(data) ?
+	} $else $if T is f64 {
+		result << encode_type(.float) ?
+		result << encode_float(data) ?
+	} $else $if T is string {
+		result << encode_type(.string) ?
+		result << encode_string(data) ?
 	} $else {
 		return error('unknown type')
 	}
-	len := encode_uint(u64(result.len)) ?
-	result.prepend(len)
 	return result
 }
 
@@ -61,13 +92,34 @@ fn encode_int(x i64) ?[]byte {
 }
 
 fn encode_uint(x u64) ?[]byte {
-	return if x < 128 {
-		[byte(x)]
-	} else if x < 32768 {
-		[~byte(1), byte(x >> 8), byte(x)]
-	} else if x < 2147483648 {
-		[~byte(3), byte(x >> 24), byte(x >> 16), byte(x >> 8), byte(x)]
+	if x < 128 {
+		return [byte(x)]
+	} else if x < 65536 {
+		return [~byte(1), byte(x >> 8), byte(x)]
+	} else if x < 4294967296 {
+		return [~byte(3), byte(x >> 24), byte(x >> 16), byte(x >> 8), byte(x)]
+	} else if x <= 18446744073709551615 {
+		return [~byte(7), byte(x >> 56), byte(x >> 48), byte(x >> 40), byte(x >> 32), byte(x >> 24),
+			byte(x >> 16), byte(x >> 8), byte(x)]
 	} else {
-		error('too big (TODO): $x')
+		return error('too big: $x, ${x < 18446744073709551616}')
 	}
+}
+
+fn encode_float(x f64) ?[]byte {
+	return encode_uint(bits.reverse_bytes_64(unsafe { FToU{ f: x }.u }))
+}
+
+// and back again
+union FToU {
+	f f64
+	u u64
+}
+
+fn encode_string(x string) ?[]byte {
+	mut res := encode_uint(u64(x.len)) ?
+	for c in x {
+		res << c
+	}
+	return res
 }
