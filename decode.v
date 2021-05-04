@@ -19,6 +19,10 @@ fn decode<T>(data []byte) ?T {
 			error('invalid length')
 		}
 	}
+	return d.decode_no_len<T>(data)
+}
+
+fn (mut d Decoder) decode_no_len<T>(data []byte) ?T {
 	$if T is i8 {
 		d.decode_type(.int) ?
 		return i8(d.decode_int() ?)
@@ -126,23 +130,6 @@ fn (mut d Decoder) decode_float() ?f64 {
 		}.f
 	}
 }
-
-// fn encode_float(x f64) ?[]byte {
-// 	mut res := u64(0)
-// 	unsafe {
-// 		first_byte := &byte(&x)
-// 		// this operation reverses the float (because x86 is little-endian)
-// 		res |= (*(first_byte + 0))
-// 		res |= (*(first_byte + 1)) << 8
-// 		res |= (*(first_byte + 2)) << 16
-// 		res |= (*(first_byte + 3)) << 24
-// 		res |= (*(first_byte + 4)) << 32
-// 		res |= (*(first_byte + 5)) << 40
-// 		res |= (*(first_byte + 6)) << 48
-// 		res |= (*(first_byte + 7)) << 56
-// 	}
-// 	return encode_uint(res)
-// }
 
 [manualfree]
 fn (mut d Decoder) decode_string() ?string {

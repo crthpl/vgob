@@ -3,14 +3,6 @@ module vgob
 import math.bits
 
 pub fn encode<T>(data T) ?[]byte {
-	// $for field in T.fields {
-	// 	$if field.typ is string {
-	// 		// $(string_expr) produces an identifier
-	// 		// result.$(field.name) = encode_string(data, field.name)
-	// 	} $else $if field.typ is int {
-	// 		result << encode_int(data) ?
-	// 	}
-	// }
 	mut res := encode_no_len<T>(data) ?
 	len := encode_uint(u64(res.len)) ?
 	res.prepend(len)
@@ -58,6 +50,14 @@ fn encode_no_len<T>(data T) ?[]byte {
 	} $else {
 		return error('unknown type')
 	}
+	// $for field in T.fields {
+	// 	$if field.typ is string {
+	// 		// $(string_expr) produces an identifier
+	// 		// result.$(field.name) = encode_string(data, field.name)
+	// 	} $else $if field.typ is int {
+	// 		result << encode_int(data) ?
+	// 	}
+	// }
 	return result
 }
 
